@@ -365,6 +365,15 @@ void editorDrawStatusBar(struct abuf *ab) {
     }
   }
   abAppend(ab, "\x1b[m", 3);
+  abAppend(ab, "\r\n", 2);
+}
+
+void editorDrawMessageBar(struct abuf *ab) {
+  abAppend(ab, "\x1b[K", 3);
+  int msglen = strlen(E.statusmsg);
+  if (msglen > E.screencols) msglen = E.screencols;
+  if (msglen && time(NULL) - E.statusmsg_time < 5)
+    abAppend(ab, E.statusmsg, msglen);
 }
 
 void editorRefreshScreen() {
@@ -374,8 +383,11 @@ void editorRefreshScreen() {
 
   abAppend(&ab, "\x1b[?25l", 6);  // Hide cursor
   abAppend(&ab, "\x1b[H", 3);     // Position cursor at top left
-  editorDrawRows(&ab);            // Draw ~
+
+  editorDrawRows(&ab);  // Draw ~
   editorDrawStatusBar(&ab);
+  editorDrawMessageBar(&ab);
+
   char buf[32];
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1,
            (E.rx - E.coloff) + 1);
@@ -488,7 +500,7 @@ void initEditor() {
   E.statusmsg_time = 0;
 
   if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
-  E.screenrows -= 1;
+  E.screenrows -= 2;
 }
 
 int main(int argc, char *argv[]) {
@@ -497,6 +509,8 @@ int main(int argc, char *argv[]) {
   if (argc >= 2) {
     editorOpen(argv[1]);
   }
+
+  editorSetStatusMessage("HELP: Ctrl-Q = quit");
 
   while (1) {
     editorRefreshScreen();
